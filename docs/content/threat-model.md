@@ -1,6 +1,8 @@
-# Threat model
-
-What the library defends against, how, and what it leaves to you.
+---
+title: Threat model
+weight: 7
+lead: What the library defends against, how, and what it leaves to you.
+---
 
 ## Assets
 

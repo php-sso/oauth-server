@@ -25,8 +25,8 @@ and the in-memory stores in `src/InMemory/`, which exist for tests and examples 
 
 ## What you are responsible for
 
-The library enforces the protocol. These parts are yours, and the threat model
-([docs/threat-model.md](docs/threat-model.md)) lists what happens if they are wrong:
+The library enforces the protocol. These parts are yours, and the
+[threat model](https://php-sso.github.io/oauth-server/threat-model/) lists what happens if they are wrong:
 
 - Storage implementations must make `markUsed()` and `markConsumed()` atomic.
 - Serve the issuer over HTTPS only.
