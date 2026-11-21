@@ -1,0 +1,63 @@
+{
+    "name": "php-sso/oauth-server",
+    "description": "OAuth 2.0 and OpenID Connect authorization server for PSR-7 and PSR-15 applications, without third-party runtime dependencies.",
+    "keywords": [
+        "oauth2",
+        "openid-connect",
+        "oidc",
+        "authorization-server",
+        "psr-7",
+        "psr-15",
+        "pkce",
+        "jwt"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/php-sso/oauth-server",
+    "support": {
+        "issues": "https://github.com/php-sso/oauth-server/issues",
+        "source": "https://github.com/php-sso/oauth-server"
+    },
+    "require": {
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "php": "^8.2",
+        "psr/clock": "^1.0",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0"
+    },
+    "require-dev": {
+        "laminas/laminas-diactoros": "^3.0",
+        "lcobucci/jwt": "^5.0",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^11.0 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhpSso\\OAuthServer\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PhpSso\\OAuthServer\\Tests\\Unit\\": "tests/unit/PhpSso/OAuthServer/",
+            "PhpSso\\OAuthServer\\Tests\\Support\\": "tests/support/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "check": [
+            "@analyse",
+            "@test"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}
