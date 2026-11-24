@@ -2,7 +2,7 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project follows [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.1.0 - 2026-11-24
 
 - Dynamic client registration (RFC 7591) and client configuration management (RFC 7592), off unless you pass a
   `ClientRegistrations` store to `AuthorizationServer`. Registering needs an access token with the `client:register` scope
