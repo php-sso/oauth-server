@@ -19,6 +19,7 @@ use PhpSso\OAuthServer\Http\ErrorResponder;
 use PhpSso\OAuthServer\Http\Params;
 use PhpSso\OAuthServer\Http\Responses;
 use PhpSso\OAuthServer\Pkce\Pkce;
+use PhpSso\OAuthServer\Resource\ResourceIndicators;
 use PhpSso\OAuthServer\Token\IssuedTokens;
 use PhpSso\OAuthServer\Token\TokenHash;
 use PhpSso\OAuthServer\Token\TokenIssuer;
@@ -49,6 +50,7 @@ final readonly class TokenHandler implements RequestHandlerInterface
         private ClockInterface $clock,
         private Responses $responses,
         private ErrorResponder $errors,
+        private ResourceIndicators $resources,
     ) {
     }
 
@@ -118,7 +120,9 @@ final readonly class TokenHandler implements RequestHandlerInterface
         }
         $this->assertMayUse($client, $code->userId);
 
-        return $this->issuer->issue($client, $code->userId, $code->scopes, $code->sessionId, $code->familyId, $code->nonce, GrantType::AuthorizationCode, $code->authTime, $code->amr);
+        $resources = $this->resources->resolve($this->resources->requested($body), $code->resources, $client);
+
+        return $this->issuer->issue($client, $code->userId, $code->scopes, $code->sessionId, $code->familyId, $code->nonce, GrantType::AuthorizationCode, $code->authTime, $code->amr, $resources, $code->resources);
     }
 
     /** @throws OAuthException */
@@ -154,13 +158,14 @@ final readonly class TokenHandler implements RequestHandlerInterface
         if ($scopes === []) {
             throw OAuthException::invalidGrant('The scopes this refresh token was issued for are no longer available to the client.');
         }
+        $resources = $this->resources->resolve($this->resources->requested($body), $token->resources, $client);
         if (!$this->refreshTokens->markUsed($hash, $now)) {
             $this->refreshTokens->revokeFamily($token->familyId, $now);
             throw $invalid;
         }
         $this->assertMayUse($client, $token->userId);
 
-        return $this->issuer->issue($client, $token->userId, $scopes, $token->sessionId, $token->familyId, null, GrantType::RefreshToken, $token->authTime, $token->amr);
+        return $this->issuer->issue($client, $token->userId, $scopes, $token->sessionId, $token->familyId, null, GrantType::RefreshToken, $token->authTime, $token->amr, $resources, $token->resources);
     }
 
     /** @throws OAuthException */
@@ -170,7 +175,9 @@ final readonly class TokenHandler implements RequestHandlerInterface
             throw OAuthException::unauthorizedClient('Only confidential clients may use client credentials.');
         }
 
-        return $this->issuer->issueForClient($client, $this->scopes->validate($client, $body->string('scope')));
+        $scopes = $this->scopes->validate($client, $body->string('scope'));
+
+        return $this->issuer->issueForClient($client, $scopes, $this->resources->resolve($this->resources->requested($body), [], $client));
     }
 
     /** @throws OAuthException */
@@ -201,7 +208,9 @@ final readonly class TokenHandler implements RequestHandlerInterface
         }
         $this->assertMayUse($client, $request->userId);
 
-        return $this->issuer->issue($client, $request->userId, $request->scopes, $request->sessionId, $request->familyId, null, GrantType::DeviceCode, null);
+        $resources = $this->resources->resolve($this->resources->requested($body), [], $client);
+
+        return $this->issuer->issue($client, $request->userId, $request->scopes, $request->sessionId, $request->familyId, null, GrantType::DeviceCode, null, null, $resources);
     }
 
     /** A device that polls faster than the interval is told to slow down, and the interval grows. */

@@ -17,6 +17,7 @@ final readonly class AuthorizationCodeRecord
      * @param int|null     $usedAt    Unix time of the first redemption, null while unused.
      * @param int|null     $authTime  Unix time the person actually signed in, for the ID token's `auth_time`.
      * @param list<string>|null $amr  How the person signed in (RFC 8176 values such as `pwd`, `otp`, `mfa`), for the ID token's `amr`.
+     * @param list<string> $resources Resource indicators of the authorization request (RFC 8707); empty when it named none. Stores must keep them.
      */
     public function __construct(
         public string $codeHash,
@@ -32,6 +33,7 @@ final readonly class AuthorizationCodeRecord
         public ?int $usedAt,
         public ?int $authTime,
         public ?array $amr = null,
+        public array $resources = [],
     ) {
     }
 }

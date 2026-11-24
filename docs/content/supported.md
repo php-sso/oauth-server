@@ -19,6 +19,9 @@ key rotation, RFC 9207 `iss` on authorization responses, `prompt=none`, `prompt=
 
 Dynamic client registration (RFC 7591) and its management protocol (RFC 7592), see [Client registration](../registration/).
 
+Resource indicators (RFC 8707), see [Resource indicators](../resource-indicators/): tokens that only one API accepts. Not for the device
+authorization request, only for the token requests of the device grant.
+
 Logout and revocation: RP-initiated logout (end-session endpoint), back-channel logout, token revocation
 (RFC 7009) and introspection (RFC 7662).
 

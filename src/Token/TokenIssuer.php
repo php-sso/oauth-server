@@ -33,15 +33,16 @@ final readonly class TokenIssuer
      * with no refresh token and no ID token, because no person is involved.
      *
      * @param list<string> $scopes
+     * @param list<string> $resources The resources the token is for (RFC 8707); empty for the usual audience.
      */
-    public function issueForClient(Client $client, array $scopes): IssuedTokens
+    public function issueForClient(Client $client, array $scopes, array $resources = []): IssuedTokens
     {
         $now = $this->clock->now()->getTimestamp();
 
         $accessToken = $this->encoder->encode([
             'iss' => $this->config->issuer,
             'sub' => $client->id(),
-            'aud' => $this->audienceFor($client),
+            'aud' => $this->audienceFor($client, $resources),
             'client_id' => $client->id(),
             'scope' => implode(' ', $scopes),
             'iat' => $now,
@@ -58,10 +59,12 @@ final readonly class TokenIssuer
      * @param string       $familyId  The rotation chain the refresh token belongs to; also stamped on the access token.
      * @param int|null     $authTime  When the person signed in; becomes the ID token's `auth_time`.
      * @param list<string>|null $amr  How they signed in; becomes the ID token's `amr` (left out when null or empty).
+     * @param list<string> $resources What this access token is for (RFC 8707); empty for the usual audience.
+     * @param list<string>|null $grantedResources What the whole grant is for, kept on the refresh token so a later refresh can ask for any of it; the same as `$resources` when null.
      *
      * @throws OAuthException when the person no longer exists
      */
-    public function issue(Client $client, string $userId, array $scopes, ?string $sessionId, string $familyId, ?string $nonce, GrantType $grant, ?int $authTime, ?array $amr = null): IssuedTokens
+    public function issue(Client $client, string $userId, array $scopes, ?string $sessionId, string $familyId, ?string $nonce, GrantType $grant, ?int $authTime, ?array $amr = null, array $resources = [], ?array $grantedResources = null): IssuedTokens
     {
         $userClaims = $this->claims->claimsFor($userId, $scopes);
         if ($userClaims === null) {
@@ -76,7 +79,7 @@ final readonly class TokenIssuer
         $accessToken = $this->encoder->encode([
             'iss' => $this->config->issuer,
             'sub' => $userId,
-            'aud' => $this->audienceFor($client),
+            'aud' => $this->audienceFor($client, $resources),
             'client_id' => $client->id(),
             'scope' => implode(' ', $scopes),
             'iat' => $now,
@@ -90,7 +93,7 @@ final readonly class TokenIssuer
         if ($client->allowsGrant(GrantType::RefreshToken)) {
             $refreshToken = $this->generator->generate();
             $this->refreshTokens->save(new RefreshTokenRecord(
-                TokenHash::of($refreshToken), $familyId, $client->id(), $userId, $scopes, $sessionId, $now + $this->config->refreshTokenTtl, null, $authTime, $amr,
+                TokenHash::of($refreshToken), $familyId, $client->id(), $userId, $scopes, $sessionId, $now + $this->config->refreshTokenTtl, null, $authTime, $amr, $grantedResources ?? $resources,
             ));
         }
 
@@ -114,11 +117,16 @@ final readonly class TokenIssuer
      * it) and the client it was issued to. An API that serves one application checks for that application's
      * client id, so a token issued to one application does not work at another's API.
      *
-     * @return string|list<string> a single string when both are the same
+     * With resource indicators (RFC 8707) the token is for those resources, and still for this server (so that userinfo works),
+     * but no longer for the client id: that is how an API that only accepts its own resource refuses everything else.
+     *
+     * @param list<string> $resources
+     *
+     * @return string|list<string> a single string when there is only one
      */
-    private function audienceFor(Client $client): string|array
+    private function audienceFor(Client $client, array $resources = []): string|array
     {
-        $audiences = array_values(array_unique([$this->config->audience(), $client->id()]));
+        $audiences = array_values(array_unique($resources === [] ? [$this->config->audience(), $client->id()] : [...$resources, $this->config->audience()]));
 
         return count($audiences) === 1 ? $audiences[0] : $audiences;
     }

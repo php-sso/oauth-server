@@ -25,6 +25,7 @@ use PhpSso\OAuthServer\Logout\LogoutSupport;
 use PhpSso\OAuthServer\Pkce\Pkce;
 use PhpSso\OAuthServer\Registration\ClientsWithRegistrations;
 use PhpSso\OAuthServer\Registration\RegistrarPolicy;
+use PhpSso\OAuthServer\Resource\ResourcePolicy;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -60,7 +61,7 @@ final class TestServer
     public readonly AuthorizationServer $server;
     public readonly ServerConfig $config;
 
-    public function __construct(bool $requirePkceForConfidentialClients = true, ?ErrorResponder $browserErrors = null, bool $registration = true, ?RegistrarPolicy $registrarPolicy = null)
+    public function __construct(bool $requirePkceForConfidentialClients = true, ?ErrorResponder $browserErrors = null, bool $registration = true, ?RegistrarPolicy $registrarPolicy = null, ?ResourcePolicy $resourcePolicy = null)
     {
         $this->clock = new FrozenClock();
         $this->claims = new TestClaimsProvider();
@@ -106,6 +107,7 @@ final class TestServer
             browserErrors: $browserErrors,
             registrations: $registration ? $this->registrations : null,
             registrarPolicy: $registrarPolicy,
+            resourcePolicy: $resourcePolicy,
         );
     }
 

@@ -14,6 +14,7 @@ final readonly class RefreshTokenRecord
      * @param int|null     $usedAt    Unix time it was exchanged for a new token, null while current.
      * @param int|null     $authTime  Unix time the person actually signed in; carried to every ID token of the chain.
      * @param list<string>|null $amr  How the person signed in; carried to every ID token of the chain, like `authTime`.
+     * @param list<string> $resources What the grant was for (RFC 8707), carried through every rotation; empty when none were named. Stores must keep them.
      */
     public function __construct(
         public string $tokenHash,
@@ -26,6 +27,7 @@ final readonly class RefreshTokenRecord
         public ?int $usedAt,
         public ?int $authTime,
         public ?array $amr = null,
+        public array $resources = [],
     ) {
     }
 }

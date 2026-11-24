@@ -20,6 +20,7 @@ use PhpSso\OAuthServer\Http\Params;
 use PhpSso\OAuthServer\Http\Responses;
 use PhpSso\OAuthServer\Logout\SessionRegistry;
 use PhpSso\OAuthServer\Pkce\Pkce;
+use PhpSso\OAuthServer\Resource\ResourceIndicators;
 use PhpSso\OAuthServer\Token\TokenGenerator;
 use PhpSso\OAuthServer\Token\TokenHash;
 use Psr\Clock\ClockInterface;
@@ -76,6 +77,7 @@ final readonly class AuthorizationHandler implements RequestHandlerInterface
         private Responses $responses,
         private ErrorResponder $errors,
         private SessionRegistry $sessions,
+        private ResourceIndicators $resources,
     ) {
     }
 
@@ -101,7 +103,7 @@ final readonly class AuthorizationHandler implements RequestHandlerInterface
             $state = $params->string('state');
             $authorization = $this->validate($params, $client, $redirectUri, $state);
             $userId = $request->getAttribute(self::USER_ID);
-            $resume = $request->withAttribute(self::RESUME_PARAMS, array_diff_key($params->all(), ['prompt' => true, 'max_age' => true]));
+            $resume = $request->withAttribute(self::RESUME_PARAMS, array_replace(array_diff_key($params->all(), ['prompt' => true, 'max_age' => true]), $this->resumeResources($params)));
             $authTime = $request->getAttribute(self::AUTH_TIME);
             $authTime = is_int($authTime) ? $authTime : null;
             $amr = self::methods($request->getAttribute(self::AMR));
@@ -185,7 +187,21 @@ final readonly class AuthorizationHandler implements RequestHandlerInterface
             in_array('none', $prompts, true),
             in_array('login', $prompts, true),
             $maxAge === null ? null : (int) $maxAge,
+            $this->resources->resolve($this->resources->requested($params), [], $client),
         );
+    }
+
+    /**
+     * The `resource` parameters (RFC 8707) for the resume parameters: `all()` leaves out a parameter that was repeated, but the
+     * sign-in must not lose them. One stays a string; several become a list.
+     *
+     * @return array<string, string|list<string>>
+     */
+    private function resumeResources(Params $params): array
+    {
+        $resources = $params->repeated('resource');
+
+        return count($resources) > 1 ? ['resource' => $resources] : [];
     }
 
     /** Public clients always need PKCE; confidential ones unless the server was told they may leave it out. */
@@ -216,6 +232,7 @@ final readonly class AuthorizationHandler implements RequestHandlerInterface
             null,
             $authTime,
             $amr,
+            $request->resources,
         ));
 
         return $this->responses->redirect($request->redirectUri, array_filter([

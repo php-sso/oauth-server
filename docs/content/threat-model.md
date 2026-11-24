@@ -19,7 +19,7 @@ Authorization codes, refresh tokens, access and ID tokens, client secrets, the s
 | Authorization request tampering | `request` and `request_uri` are refused rather than ignored. |
 | Mix-up between servers | `iss` is returned in every authorization response (RFC 9207). |
 | Token forgery | RS256 only, key from the server's own key set. `alg`, `typ` and `kid` are checked. The signature must be in canonical base64url. `alg: none` and key-confusion are covered by a test that alters every character of a valid token. |
-| Token misuse across APIs | `aud` holds the server and the client. APIs can require their own audience. Access tokens are `at+jwt`, ID tokens `JWT`, so one cannot pass for the other, also not as `id_token_hint`. |
+| Token misuse across APIs | `aud` holds the server and the client. APIs can require their own audience. With resource indicators (RFC 8707) it holds the requested resources and the server instead of the client, so an API that only accepts its own resource refuses every other token. Access tokens are `at+jwt`, ID tokens `JWT`, so one cannot pass for the other, also not as `id_token_hint`. |
 | Client secret guessing | Secrets are compared by your repository (use `password_verify`). Every authentication failure gives the same answer. |
 | Finding out which client ids exist | An unknown id gets the same answer as a wrong secret. If your repository implements `EqualisesVerificationTime`, it also takes about as long. |
 | Key leakage through logs | `SigningKey` hides the key from stack traces and dumps. |

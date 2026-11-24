@@ -35,7 +35,7 @@ final class InMemoryRefreshTokenStore implements RefreshTokenStore
 
         $this->tokens[$tokenHash] = new RefreshTokenRecord(
             $token->tokenHash, $token->familyId, $token->clientId, $token->userId, $token->scopes,
-            $token->sessionId, $token->expiresAt, $at, $token->authTime, $token->amr,
+            $token->sessionId, $token->expiresAt, $at, $token->authTime, $token->amr, $token->resources,
         );
 
         return true;

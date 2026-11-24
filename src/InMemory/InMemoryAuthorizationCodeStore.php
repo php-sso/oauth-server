@@ -32,7 +32,7 @@ final class InMemoryAuthorizationCodeStore implements AuthorizationCodeStore
 
         $this->codes[$codeHash] = new AuthorizationCodeRecord(
             $code->codeHash, $code->clientId, $code->userId, $code->redirectUri, $code->scopes,
-            $code->codeChallenge, $code->nonce, $code->sessionId, $code->familyId, $code->expiresAt, $at, $code->authTime, $code->amr,
+            $code->codeChallenge, $code->nonce, $code->sessionId, $code->familyId, $code->expiresAt, $at, $code->authTime, $code->amr, $code->resources,
         );
 
         return true;

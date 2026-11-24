@@ -119,6 +119,12 @@ final class OAuthException extends RuntimeException
         return new self('insufficient_scope', $description, 403);
     }
 
+    /** RFC 8707: a requested resource is unknown, malformed, or not available to the client. */
+    public static function invalidTarget(string $description): self
+    {
+        return new self('invalid_target', $description, 400);
+    }
+
     /** RFC 7591: a redirect URI of the registration is not acceptable. */
     public static function invalidRedirectUri(string $description): self
     {

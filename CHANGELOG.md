@@ -4,6 +4,11 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+- Resource indicators (RFC 8707), off unless you pass a `ResourcePolicy` (`resourcePolicy:` on `AuthorizationServer`). The `resource` parameter
+  (repeatable) is accepted at the authorization endpoint and at the token endpoint for every grant. An access token issued for resources has them as
+  its audience, next to this server's own, and no longer names the client; a refresh may narrow the resources but never widen them, and the
+  grant keeps them through every rotation. Errors use `invalid_target`. `AuthorizationCodeRecord` and `RefreshTokenRecord` have a new `resources`
+  list that your stores must keep, and `Params::repeated()` reads a parameter that appears more than once.
 - `RegistrarPolicy` (optional, `registrarPolicy:` on `AuthorizationServer`): decides per registrar whether it may register apps right now
   (checked on every registration, so taking the right away works for tokens already issued) and which scopes the apps it registers may
   get, also when those apps update themselves. Discovery advertises `registration_endpoint` only while some client may register.

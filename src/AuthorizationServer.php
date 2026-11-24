@@ -43,6 +43,8 @@ use PhpSso\OAuthServer\Middleware\BearerTokenMiddleware;
 use PhpSso\OAuthServer\Registration\ClientMetadataValidator;
 use PhpSso\OAuthServer\Registration\ClientRegistrations;
 use PhpSso\OAuthServer\Registration\RegistrarPolicy;
+use PhpSso\OAuthServer\Resource\ResourceIndicators;
+use PhpSso\OAuthServer\Resource\ResourcePolicy;
 use PhpSso\OAuthServer\Registration\RegistrationConfig;
 use PhpSso\OAuthServer\Token\RandomTokenGenerator;
 use PhpSso\OAuthServer\Token\RandomUserCodeGenerator;
@@ -76,6 +78,7 @@ final readonly class AuthorizationServer
     private ErrorResponder $browserErrors;
     private ScopeValidator $scopes;
     private ClientAuthenticator $clientAuthenticator;
+    private ResourceIndicators $resources;
     private TokenIssuer $issuer;
     private JwtDecoder $decoder;
     private StreamFactoryInterface $streamFactory;
@@ -89,6 +92,7 @@ final readonly class AuthorizationServer
      * @param ClientRegistrations|null $registrations Turns on dynamic client registration (RFC 7591 and 7592) when given. Your
      *                                           ClientRepository must find these clients too: see ClientsWithRegistrations.
      * @param RegistrationConfig|null $registration What registration accepts; the defaults when null.
+     * @param ResourcePolicy|null $resourcePolicy Turns on resource indicators (RFC 8707): which resources a client may get tokens for. The `resource` parameter is ignored without one.
      * @param RegistrarPolicy|null $registrarPolicy Which clients may register, and what the apps they register may get, per registrar.
      */
     public function __construct(
@@ -115,6 +119,7 @@ final readonly class AuthorizationServer
         private ?ClientRegistrations $registrations = null,
         private ?RegistrationConfig $registration = null,
         private ?RegistrarPolicy $registrarPolicy = null,
+        ?ResourcePolicy $resourcePolicy = null,
     ) {
         $this->clock = $clock ?? new SystemClock();
         $this->tokenGenerator = $tokenGenerator ?? new RandomTokenGenerator();
@@ -124,6 +129,7 @@ final readonly class AuthorizationServer
         $this->errors = $errors ?? new JsonErrorResponder($this->responses);
         $this->browserErrors = $browserErrors ?? $this->errors;
         $this->scopes = new ScopeValidator($config);
+        $this->resources = new ResourceIndicators($resourcePolicy);
         $this->clientAuthenticator = new ClientAuthenticator($clients);
         $this->decoder = new JwtDecoder($keys);
         $this->issuer = new TokenIssuer($config, new JwtEncoder($keys), $this->tokenGenerator, $refreshTokens, $claims, $this->clock);
@@ -133,7 +139,7 @@ final readonly class AuthorizationServer
     {
         return new AuthorizationHandler(
             $this->config, $this->clients, $this->scopes, $this->policy, $this->ui, $this->codes,
-            $this->tokenGenerator, $this->clock, $this->responses, $this->browserErrors, $this->logout->sessions,
+            $this->tokenGenerator, $this->clock, $this->responses, $this->browserErrors, $this->logout->sessions, $this->resources,
         );
     }
 
@@ -141,7 +147,7 @@ final readonly class AuthorizationServer
     {
         return new TokenHandler(
             $this->clientAuthenticator, $this->scopes, $this->codes, $this->refreshTokens, $this->devices,
-            $this->policy, $this->issuer, $this->clock, $this->responses, $this->errors,
+            $this->policy, $this->issuer, $this->clock, $this->responses, $this->errors, $this->resources,
         );
     }
 
