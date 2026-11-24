@@ -11,6 +11,7 @@ use PhpSso\OAuthServer\Http\Responses;
 use PhpSso\OAuthServer\Registration\ClientMetadataValidator;
 use PhpSso\OAuthServer\Registration\ClientRegistration;
 use PhpSso\OAuthServer\Registration\ClientRegistrations;
+use PhpSso\OAuthServer\Registration\RegistrarPolicy;
 use PhpSso\OAuthServer\Token\TokenGenerator;
 use PhpSso\OAuthServer\Token\TokenHash;
 use Psr\Http\Message\ResponseInterface;
@@ -39,6 +40,7 @@ final readonly class ClientConfigurationHandler implements RequestHandlerInterfa
         private TokenGenerator $tokens,
         private Responses $responses,
         private ErrorResponder $errors,
+        private ?RegistrarPolicy $policy = null,
     ) {
     }
 
@@ -84,7 +86,8 @@ final readonly class ClientConfigurationHandler implements RequestHandlerInterfa
             throw OAuthException::invalidRequest('The client_secret does not match; a secret cannot be chosen by the client.');
         }
 
-        $metadata = $this->validator->validate($input);
+        $registrar = $registration->registeredBy;
+        $metadata = $this->validator->validate($input, $registrar === null ? null : $this->policy?->allowedScopes($registrar));
         $secret = null;
         $secretHash = $registration->secretHash;
         if (!$metadata->isConfidential()) {

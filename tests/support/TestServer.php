@@ -24,6 +24,7 @@ use PhpSso\OAuthServer\Jwt\StaticKeyProvider;
 use PhpSso\OAuthServer\Logout\LogoutSupport;
 use PhpSso\OAuthServer\Pkce\Pkce;
 use PhpSso\OAuthServer\Registration\ClientsWithRegistrations;
+use PhpSso\OAuthServer\Registration\RegistrarPolicy;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -59,7 +60,7 @@ final class TestServer
     public readonly AuthorizationServer $server;
     public readonly ServerConfig $config;
 
-    public function __construct(bool $requirePkceForConfidentialClients = true, ?ErrorResponder $browserErrors = null, bool $registration = true)
+    public function __construct(bool $requirePkceForConfidentialClients = true, ?ErrorResponder $browserErrors = null, bool $registration = true, ?RegistrarPolicy $registrarPolicy = null)
     {
         $this->clock = new FrozenClock();
         $this->claims = new TestClaimsProvider();
@@ -104,6 +105,7 @@ final class TestServer
             $this->clock,
             browserErrors: $browserErrors,
             registrations: $registration ? $this->registrations : null,
+            registrarPolicy: $registrarPolicy,
         );
     }
 

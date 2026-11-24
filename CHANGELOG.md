@@ -2,6 +2,12 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+- `RegistrarPolicy` (optional, `registrarPolicy:` on `AuthorizationServer`): decides per registrar whether it may register apps right now
+  (checked on every registration, so taking the right away works for tokens already issued) and which scopes the apps it registers may
+  get, also when those apps update themselves. Discovery advertises `registration_endpoint` only while some client may register.
+
 ## 1.1.1 - 2026-11-24
 
 - Fix: the registration endpoints read the raw JSON body when the framework left the parsed body empty, which is what PHP's own request factory does for JSON requests.

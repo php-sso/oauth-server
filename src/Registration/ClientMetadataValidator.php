@@ -24,10 +24,11 @@ final readonly class ClientMetadataValidator
 
     /**
      * @param array<array-key, mixed> $input
+     * @param list<string>|null       $allowedScopes What the client may ask for, instead of the configured scopes.
      *
      * @throws OAuthException
      */
-    public function validate(array $input): ClientMetadata
+    public function validate(array $input, ?array $allowedScopes = null): ClientMetadata
     {
         if (array_key_exists('software_statement', $input)) {
             throw OAuthException::invalidSoftwareStatement('Software statements are not supported.');
@@ -60,7 +61,7 @@ final readonly class ClientMetadataValidator
             responseTypes: $responseTypes,
             grantTypes: $grants,
             tokenEndpointAuthMethod: $method,
-            scopes: $this->scopes($input),
+            scopes: $this->scopes($input, $allowedScopes === null ? $this->allowedScopes : array_values(array_filter($allowedScopes, fn (string $s): bool => $s !== $this->config->scope))),
             clientName: $this->text($input, 'client_name', 100),
             clientUri: $this->url($input, 'client_uri'),
             logoUri: $this->url($input, 'logo_uri'),
@@ -103,9 +104,11 @@ final readonly class ClientMetadataValidator
     /**
      * @param array<array-key, mixed> $input
      *
+     * @param list<string>            $allowed
+     *
      * @return list<string>
      */
-    private function scopes(array $input): array
+    private function scopes(array $input, array $allowed): array
     {
         $raw = $this->string($input, 'scope');
         $scopes = $this->config->defaultScopes;
@@ -113,7 +116,7 @@ final readonly class ClientMetadataValidator
             $scopes = array_values(array_unique(array_filter(explode(' ', $raw), static fn (string $s): bool => $s !== '')));
         }
         foreach ($scopes as $scope) {
-            if (!in_array($scope, $this->allowedScopes, true)) {
+            if (!in_array($scope, $allowed, true)) {
                 throw OAuthException::invalidClientMetadata("The scope {$scope} is not available to registered clients.");
             }
         }

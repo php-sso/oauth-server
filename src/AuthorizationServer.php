@@ -42,6 +42,7 @@ use PhpSso\OAuthServer\Logout\LogoutSupport;
 use PhpSso\OAuthServer\Middleware\BearerTokenMiddleware;
 use PhpSso\OAuthServer\Registration\ClientMetadataValidator;
 use PhpSso\OAuthServer\Registration\ClientRegistrations;
+use PhpSso\OAuthServer\Registration\RegistrarPolicy;
 use PhpSso\OAuthServer\Registration\RegistrationConfig;
 use PhpSso\OAuthServer\Token\RandomTokenGenerator;
 use PhpSso\OAuthServer\Token\RandomUserCodeGenerator;
@@ -88,6 +89,7 @@ final readonly class AuthorizationServer
      * @param ClientRegistrations|null $registrations Turns on dynamic client registration (RFC 7591 and 7592) when given. Your
      *                                           ClientRepository must find these clients too: see ClientsWithRegistrations.
      * @param RegistrationConfig|null $registration What registration accepts; the defaults when null.
+     * @param RegistrarPolicy|null $registrarPolicy Which clients may register, and what the apps they register may get, per registrar.
      */
     public function __construct(
         private ServerConfig $config,
@@ -112,6 +114,7 @@ final readonly class AuthorizationServer
         ?ErrorResponder $browserErrors = null,
         private ?ClientRegistrations $registrations = null,
         private ?RegistrationConfig $registration = null,
+        private ?RegistrarPolicy $registrarPolicy = null,
     ) {
         $this->clock = $clock ?? new SystemClock();
         $this->tokenGenerator = $tokenGenerator ?? new RandomTokenGenerator();
@@ -204,7 +207,7 @@ final readonly class AuthorizationServer
     {
         return new ClientRegistrationHandler(
             $this->config, $this->endpoints, $this->registrationValidator(), $this->registrationStore(),
-            $this->tokenGenerator, $this->clock, $this->responses, $this->errors,
+            $this->tokenGenerator, $this->clock, $this->responses, $this->errors, $this->registrarPolicy,
         );
     }
 
@@ -213,7 +216,7 @@ final readonly class AuthorizationServer
     {
         return new ClientConfigurationHandler(
             $this->config, $this->endpoints, $this->registrationValidator(), $this->registrationStore(),
-            $this->tokenGenerator, $this->responses, $this->errors,
+            $this->tokenGenerator, $this->responses, $this->errors, $this->registrarPolicy,
         );
     }
 
@@ -258,7 +261,7 @@ final readonly class AuthorizationServer
 
     public function discoveryHandler(): DiscoveryHandler
     {
-        return new DiscoveryHandler($this->config, $this->endpoints, $this->responses, $this->claimNames, $this->registrations !== null);
+        return new DiscoveryHandler($this->config, $this->endpoints, $this->responses, $this->claimNames, $this->registrations !== null && ($this->registrarPolicy === null || $this->registrarPolicy->anyRegistrar()));
     }
 
     /**

@@ -62,6 +62,13 @@ and `[::1]`. Private-use schemes such as `com.example.app:/cb` are allowed for n
 Errors use the RFC codes `invalid_redirect_uri` and `invalid_client_metadata`. Unknown fields are ignored; software
 statements are refused (`invalid_software_statement`).
 
+## Per registrar rules
+
+Pass a `RegistrarPolicy` (`registrarPolicy:`) when different clients should have different rights. `mayRegister()` is asked on
+every registration, so taking the right away works at once, even for tokens already issued. `allowedScopes()` limits what the apps
+that registrar registered may get, also when they update themselves. `anyRegistrar()` keeps `registration_endpoint` out of
+the discovery document while nobody may use it.
+
 ## Notes
 
 - `client_name`, `logo_uri` and the other fields are chosen by the registering party. Escape them wherever you show them,

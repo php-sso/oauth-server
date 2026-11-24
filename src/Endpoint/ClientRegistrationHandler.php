@@ -13,6 +13,7 @@ use PhpSso\OAuthServer\Middleware\BearerTokenMiddleware;
 use PhpSso\OAuthServer\Registration\ClientMetadataValidator;
 use PhpSso\OAuthServer\Registration\ClientRegistration;
 use PhpSso\OAuthServer\Registration\ClientRegistrations;
+use PhpSso\OAuthServer\Registration\RegistrarPolicy;
 use PhpSso\OAuthServer\Token\TokenGenerator;
 use PhpSso\OAuthServer\Token\TokenHash;
 use Psr\Clock\ClockInterface;
@@ -39,6 +40,7 @@ final readonly class ClientRegistrationHandler implements RequestHandlerInterfac
         private ClockInterface $clock,
         private Responses $responses,
         private ErrorResponder $errors,
+        private ?RegistrarPolicy $policy = null,
     ) {
     }
 
@@ -53,7 +55,11 @@ final readonly class ClientRegistrationHandler implements RequestHandlerInterfac
                 throw OAuthException::invalidToken('Registration needs an access token; mount this handler behind the registration middleware.');
             }
 
-            $metadata = $this->validator->validate(self::jsonBody($request));
+            if ($this->policy !== null && !$this->policy->mayRegister($registeredBy)) {
+                throw OAuthException::accessDenied('This client may not register apps.');
+            }
+
+            $metadata = $this->validator->validate(self::jsonBody($request), $this->policy?->allowedScopes($registeredBy));
             $secret = $metadata->isConfidential() ? $this->tokens->generate() : null;
             $registrationToken = $this->tokens->generate();
 
