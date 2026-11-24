@@ -14,6 +14,8 @@ use PhpSso\OAuthServer\Client\ClientRepository;
 use PhpSso\OAuthServer\Config\ServerConfig;
 use PhpSso\OAuthServer\Device\DeviceVerifier;
 use PhpSso\OAuthServer\Endpoint\AuthorizationHandler;
+use PhpSso\OAuthServer\Endpoint\ClientConfigurationHandler;
+use PhpSso\OAuthServer\Endpoint\ClientRegistrationHandler;
 use PhpSso\OAuthServer\Endpoint\DeviceAuthorizationHandler;
 use PhpSso\OAuthServer\Endpoint\DiscoveryHandler;
 use PhpSso\OAuthServer\Endpoint\EndSessionHandler;
@@ -38,6 +40,9 @@ use PhpSso\OAuthServer\Logout\BackchannelLogout;
 use PhpSso\OAuthServer\Logout\LogoutService;
 use PhpSso\OAuthServer\Logout\LogoutSupport;
 use PhpSso\OAuthServer\Middleware\BearerTokenMiddleware;
+use PhpSso\OAuthServer\Registration\ClientMetadataValidator;
+use PhpSso\OAuthServer\Registration\ClientRegistrations;
+use PhpSso\OAuthServer\Registration\RegistrationConfig;
 use PhpSso\OAuthServer\Token\RandomTokenGenerator;
 use PhpSso\OAuthServer\Token\RandomUserCodeGenerator;
 use PhpSso\OAuthServer\Token\AccessTokenVerifier;
@@ -80,6 +85,9 @@ final readonly class AuthorizationServer
      * @param ErrorResponder|null $browserErrors Answers the errors of the two endpoints a person's browser lands on, the
      *                                           authorization and end-session endpoints, such as an unregistered redirect URI.
      *                                           Give it a responder that shows a page; the one for `$errors` when null.
+     * @param ClientRegistrations|null $registrations Turns on dynamic client registration (RFC 7591 and 7592) when given. Your
+     *                                           ClientRepository must find these clients too: see ClientsWithRegistrations.
+     * @param RegistrationConfig|null $registration What registration accepts; the defaults when null.
      */
     public function __construct(
         private ServerConfig $config,
@@ -102,6 +110,8 @@ final readonly class AuthorizationServer
         ?UserCodeGenerator $userCodeGenerator = null,
         ?ErrorResponder $errors = null,
         ?ErrorResponder $browserErrors = null,
+        private ?ClientRegistrations $registrations = null,
+        private ?RegistrationConfig $registration = null,
     ) {
         $this->clock = $clock ?? new SystemClock();
         $this->tokenGenerator = $tokenGenerator ?? new RandomTokenGenerator();
@@ -189,6 +199,42 @@ final readonly class AuthorizationServer
         );
     }
 
+    /** RFC 7591: mount on POST, behind {@see self::registrationMiddleware()}. */
+    public function registrationHandler(): ClientRegistrationHandler
+    {
+        return new ClientRegistrationHandler(
+            $this->config, $this->endpoints, $this->registrationValidator(), $this->registrationStore(),
+            $this->tokenGenerator, $this->clock, $this->responses, $this->errors,
+        );
+    }
+
+    /** RFC 7592: mount on GET, PUT and DELETE of `{registration endpoint}/{client_id}`. It checks the registration access token itself. */
+    public function clientConfigurationHandler(): ClientConfigurationHandler
+    {
+        return new ClientConfigurationHandler(
+            $this->config, $this->endpoints, $this->registrationValidator(), $this->registrationStore(),
+            $this->tokenGenerator, $this->responses, $this->errors,
+        );
+    }
+
+    /** Only an access token with the registration scope gets through; hand that scope to the clients you trust to register others. */
+    public function registrationMiddleware(): BearerTokenMiddleware
+    {
+        $this->registrationStore();
+
+        return $this->bearerTokenMiddleware([($this->registration ?? new RegistrationConfig())->scope]);
+    }
+
+    private function registrationValidator(): ClientMetadataValidator
+    {
+        return new ClientMetadataValidator($this->config, $this->registration ?? new RegistrationConfig());
+    }
+
+    private function registrationStore(): ClientRegistrations
+    {
+        return $this->registrations ?? throw new \LogicException('Dynamic client registration is off: pass a ClientRegistrations to the AuthorizationServer.');
+    }
+
     private function accessTokenVerifier(): AccessTokenVerifier
     {
         return new AccessTokenVerifier(
@@ -212,7 +258,7 @@ final readonly class AuthorizationServer
 
     public function discoveryHandler(): DiscoveryHandler
     {
-        return new DiscoveryHandler($this->config, $this->endpoints, $this->responses, $this->claimNames);
+        return new DiscoveryHandler($this->config, $this->endpoints, $this->responses, $this->claimNames, $this->registrations !== null);
     }
 
     /**

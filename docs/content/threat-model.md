@@ -35,7 +35,7 @@ Authorization codes, refresh tokens, access and ID tokens, client secrets, the s
 
 ## Not supported
 
-Implicit and password grants (removed in OAuth 2.1), request objects, `claims` parameter, dynamic client registration,
+Implicit and password grants (removed in OAuth 2.1), request objects, `claims` parameter, software statements,
 `acr` values, address and phone scopes, bearer tokens in a POST body, front-channel logout.
 
 ## Your side of the bargain

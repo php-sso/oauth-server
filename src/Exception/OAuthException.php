@@ -119,6 +119,24 @@ final class OAuthException extends RuntimeException
         return new self('insufficient_scope', $description, 403);
     }
 
+    /** RFC 7591: a redirect URI of the registration is not acceptable. */
+    public static function invalidRedirectUri(string $description): self
+    {
+        return new self('invalid_redirect_uri', $description, 400);
+    }
+
+    /** RFC 7591: a metadata field of the registration has a value the server does not accept. */
+    public static function invalidClientMetadata(string $description): self
+    {
+        return new self('invalid_client_metadata', $description, 400);
+    }
+
+    /** RFC 7591: the registration carries a software statement, which this server does not support. */
+    public static function invalidSoftwareStatement(string $description): self
+    {
+        return new self('invalid_software_statement', $description, 400);
+    }
+
     /** @return array{error: string, error_description: string} the JSON body of an error response */
     public function toArray(): array
     {

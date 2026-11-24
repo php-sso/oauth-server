@@ -17,6 +17,7 @@ final readonly class Endpoints
         public string $deviceVerification = '/device',
         public string $revocation = '/revoke',
         public string $introspection = '/introspect',
+        public string $registration = '/register',
     ) {
     }
 

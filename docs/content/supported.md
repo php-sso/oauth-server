@@ -17,6 +17,8 @@ Security BCP and OAuth 2.1), and `plain` PKCE.
 OpenID Connect: ID tokens (`nonce`, `sid`, `at_hash`, `auth_time`, `amr`), UserInfo, discovery (also as RFC 8414), JWKS with
 key rotation, RFC 9207 `iss` on authorization responses, `prompt=none`, `prompt=login` and `max_age`.
 
+Dynamic client registration (RFC 7591) and its management protocol (RFC 7592), see [Client registration](../registration/).
+
 Logout and revocation: RP-initiated logout (end-session endpoint), back-channel logout, token revocation
 (RFC 7009) and introspection (RFC 7662).
 
@@ -24,4 +26,4 @@ Tokens: access tokens are RS256 JWTs of type `at+jwt` (RFC 9068) with a `jti`, a
 session. Refresh tokens and codes are random 256-bit values and only their SHA-256 hash is stored.
 
 Not there yet: `prompt=consent` / `select_account` (refused as `invalid_request`), front-channel logout,
-DPoP / mTLS, dynamic client registration.
+DPoP / mTLS.

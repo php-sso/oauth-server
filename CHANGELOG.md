@@ -2,6 +2,14 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+- Dynamic client registration (RFC 7591) and client configuration management (RFC 7592), off unless you pass a
+  `ClientRegistrations` store to `AuthorizationServer`. Registering needs an access token with the `client:register` scope
+  (`registrationMiddleware()`); each client gets a registration access token to read, replace or delete only its own registration.
+  Adds `registrationHandler()`, `clientConfigurationHandler()`, `ClientsWithRegistrations`, `InMemoryClientRegistrations`,
+  and `registration_endpoint` in the discovery document.
+
 ## 1.0.0 - 2026-11-21
 
 First release.

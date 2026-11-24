@@ -23,6 +23,7 @@ final readonly class DiscoveryHandler implements RequestHandlerInterface
         private Endpoints $endpoints,
         private Responses $responses,
         private array $claims,
+        private bool $registrationEnabled = false,
     ) {
     }
 
@@ -59,6 +60,10 @@ final readonly class DiscoveryHandler implements RequestHandlerInterface
             'backchannel_logout_session_supported' => true,
             'frontchannel_logout_supported' => false,
         ];
+
+        if ($this->registrationEnabled) {
+            $metadata['registration_endpoint'] = $url($this->endpoints->registration);
+        }
 
         return $this->responses->json($metadata, 200, ['Cache-Control' => 'public, max-age=300']);
     }

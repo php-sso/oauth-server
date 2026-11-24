@@ -31,7 +31,7 @@ final class HandleTest extends TestCase
         self::assertSame(['code'], $metadata['response_types_supported']);
         self::assertSame(['S256'], $metadata['code_challenge_methods_supported']);
         self::assertSame(['RS256'], $metadata['id_token_signing_alg_values_supported']);
-        self::assertSame(['openid', 'profile', 'email', 'api'], $metadata['scopes_supported']);
+        self::assertSame(['openid', 'profile', 'email', 'api', 'client:register'], $metadata['scopes_supported']);
     }
 
     public function testItAdvertisesBackChannelLogoutAndNoFrontChannelLogout(): void
@@ -88,5 +88,29 @@ final class HandleTest extends TestCase
             ['authorization_code', 'refresh_token', 'client_credentials', 'urn:ietf:params:oauth:grant-type:device_code'],
             $metadata['grant_types_supported'],
         );
+    }
+
+    public function testItAdvertisesTheRegistrationEndpointWhenRegistrationIsOn(): void
+    {
+        // Arrange
+        $t = new TestServer();
+
+        // Act
+        $metadata = $t->json($t->server->discoveryHandler()->handle(new ServerRequest()));
+
+        // Assert
+        self::assertSame('https://sso.example.com/register', $metadata['registration_endpoint']);
+    }
+
+    public function testItLeavesOutTheRegistrationEndpointWhenRegistrationIsOff(): void
+    {
+        // Arrange
+        $t = new TestServer(registration: false);
+
+        // Act
+        $metadata = $t->json($t->server->discoveryHandler()->handle(new ServerRequest()));
+
+        // Assert
+        self::assertArrayNotHasKey('registration_endpoint', $metadata);
     }
 }

@@ -40,6 +40,12 @@ final readonly class Responses
         return $response;
     }
 
+    /** A response without a body, such as 204. */
+    public function empty(int $status): ResponseInterface
+    {
+        return $this->responses->createResponse($status);
+    }
+
     /** A response that must never be cached: tokens and errors. */
     public function noStore(ResponseInterface $response): ResponseInterface
     {

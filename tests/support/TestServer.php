@@ -15,6 +15,7 @@ use PhpSso\OAuthServer\Endpoint\Endpoints;
 use PhpSso\OAuthServer\Grant\GrantType;
 use PhpSso\OAuthServer\Http\ErrorResponder;
 use PhpSso\OAuthServer\InMemory\InMemoryAuthorizationCodeStore;
+use PhpSso\OAuthServer\InMemory\InMemoryClientRegistrations;
 use PhpSso\OAuthServer\InMemory\InMemoryDeviceAuthorizationStore;
 use PhpSso\OAuthServer\InMemory\InMemoryRefreshTokenStore;
 use PhpSso\OAuthServer\InMemory\InMemoryRevokedAccessTokens;
@@ -22,6 +23,7 @@ use PhpSso\OAuthServer\InMemory\InMemorySessionRegistry;
 use PhpSso\OAuthServer\Jwt\StaticKeyProvider;
 use PhpSso\OAuthServer\Logout\LogoutSupport;
 use PhpSso\OAuthServer\Pkce\Pkce;
+use PhpSso\OAuthServer\Registration\ClientsWithRegistrations;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -31,6 +33,7 @@ use Psr\Http\Message\ResponseInterface;
  *   spa      public, authorization code + refresh
  *   service  confidential, client credentials, scope "api"
  *   tv       public, device code
+ *   registrar confidential, client credentials, scope "client:register" (may register clients)
  */
 final class TestServer
 {
@@ -40,6 +43,7 @@ final class TestServer
 
     public readonly FrozenClock $clock;
     public readonly TestClientRepository $clients;
+    public readonly InMemoryClientRegistrations $registrations;
     public readonly TestClaimsProvider $claims;
     public readonly TestAccessPolicy $policy;
     public readonly InMemoryAuthorizationCodeStore $codes;
@@ -55,7 +59,7 @@ final class TestServer
     public readonly AuthorizationServer $server;
     public readonly ServerConfig $config;
 
-    public function __construct(bool $requirePkceForConfidentialClients = true, ?ErrorResponder $browserErrors = null)
+    public function __construct(bool $requirePkceForConfidentialClients = true, ?ErrorResponder $browserErrors = null, bool $registration = true)
     {
         $this->clock = new FrozenClock();
         $this->claims = new TestClaimsProvider();
@@ -70,19 +74,21 @@ final class TestServer
         $this->http = new FakeHttpClient();
         $this->authorizationUi = new TestAuthorizationUi();
         $this->keys = new StaticKeyProvider(TestKeys::signingKey('key-1'));
-        $this->config = new ServerConfig(self::ISSUER, ['openid', 'profile', 'email', 'api'], requirePkceForConfidentialClients: $requirePkceForConfidentialClients);
+        $this->config = new ServerConfig(self::ISSUER, ['openid', 'profile', 'email', 'api', 'client:register'], requirePkceForConfidentialClients: $requirePkceForConfidentialClients);
 
         $this->clients = new TestClientRepository();
+        $this->registrations = new InMemoryClientRegistrations();
         $user = [GrantType::AuthorizationCode, GrantType::RefreshToken];
         $this->clients->add(new TestClient('web', [self::REDIRECT], true, $user, ['openid', 'profile', 'email'], 's3cret', 'https://app.example/backchannel-logout', ['https://app.example/signed-out']));
         $this->clients->add(new TestClient('spa', [self::REDIRECT], false, $user, ['openid', 'profile']));
         $this->clients->add(new TestClient('service', [], true, [GrantType::ClientCredentials], ['api'], 'svc-secret'));
+        $this->clients->add(new TestClient('registrar', [], true, [GrantType::ClientCredentials], ['client:register'], 'reg-secret'));
         $this->clients->add(new TestClient('tv', [], false, [GrantType::DeviceCode, GrantType::RefreshToken], ['openid', 'profile']));
 
         $this->server = new AuthorizationServer(
             $this->config,
             new Endpoints(),
-            $this->clients,
+            new ClientsWithRegistrations($this->clients, $this->registrations),
             $this->claims,
             $this->policy,
             $this->authorizationUi,
@@ -97,6 +103,7 @@ final class TestServer
             ['sub', 'name', 'email'],
             $this->clock,
             browserErrors: $browserErrors,
+            registrations: $registration ? $this->registrations : null,
         );
     }
 
@@ -133,6 +140,56 @@ final class TestServer
         }
 
         return $this->server->authorizationHandler()->handle($request);
+    }
+
+    /** An access token that may register clients. */
+    public function registrarToken(): string
+    {
+        return $this->str($this->json($this->token(['grant_type' => 'client_credentials', 'scope' => 'client:register'], ['registrar', 'reg-secret'])), 'access_token');
+    }
+
+    /**
+     * Posts a registration request through the registration middleware, with the registrar's token unless another is given.
+     *
+     * @param array<string, mixed> $metadata
+     */
+    public function register(array $metadata, ?string $token = null): ResponseInterface
+    {
+        $request = (new ServerRequest([], [], '/register', 'POST'))
+            ->withHeader('Authorization', 'Bearer ' . ($token ?? $this->registrarToken()))
+            ->withParsedBody($metadata);
+
+        return $this->server->registrationMiddleware()->process($request, $this->server->registrationHandler());
+    }
+
+    /**
+     * Registers a client and returns the registration response body.
+     *
+     * @param array<string, mixed> $metadata
+     *
+     * @return array<string, mixed>
+     */
+    public function registered(array $metadata = ['redirect_uris' => [self::REDIRECT], 'token_endpoint_auth_method' => 'none']): array
+    {
+        return $this->json($this->register($metadata));
+    }
+
+    /**
+     * Calls the client configuration endpoint (RFC 7592).
+     *
+     * @param array<string, mixed>|null $body
+     */
+    public function configure(string $method, string $clientId, ?string $token, ?array $body = null): ResponseInterface
+    {
+        $request = new ServerRequest([], [], 'https://sso.example.com/register/' . rawurlencode($clientId), $method);
+        if ($token !== null) {
+            $request = $request->withHeader('Authorization', 'Bearer ' . $token);
+        }
+        if ($body !== null) {
+            $request = $request->withParsedBody($body);
+        }
+
+        return $this->server->clientConfigurationHandler()->handle($request);
     }
 
     /** The authorization code from a successful authorization response. */
