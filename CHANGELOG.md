@@ -2,7 +2,7 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project follows [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.2.0 - 2026-11-24
 
 - Resource indicators (RFC 8707), off unless you pass a `ResourcePolicy` (`resourcePolicy:` on `AuthorizationServer`). The `resource` parameter
   (repeatable) is accepted at the authorization endpoint and at the token endpoint for every grant. An access token issued for resources has them as
