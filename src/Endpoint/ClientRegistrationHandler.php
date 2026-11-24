@@ -102,8 +102,9 @@ final readonly class ClientRegistrationHandler implements RequestHandlerInterfac
      */
     public static function jsonBody(ServerRequestInterface $request): array
     {
+        // PHP leaves the parsed body as an empty array for a JSON request, so only a filled one means a framework decoded it.
         $parsed = $request->getParsedBody();
-        if (is_array($parsed)) {
+        if (is_array($parsed) && $parsed !== []) {
             return $parsed;
         }
         try {

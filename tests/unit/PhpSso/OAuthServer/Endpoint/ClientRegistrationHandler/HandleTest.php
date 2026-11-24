@@ -91,6 +91,23 @@ final class HandleTest extends TestCase
         self::assertSame(201, $response->getStatusCode());
     }
 
+    public function testItReadsTheRawJsonWhenTheParsedBodyIsEmpty(): void
+    {
+        // Arrange: this is what PHP's own request factory gives for a JSON request
+        $stream = new Stream('php://memory', 'wb+');
+        $stream->write('{"redirect_uris":["https://app.example/cb"],"token_endpoint_auth_method":"none"}');
+        $request = (new ServerRequest([], [], '/register', 'POST'))
+            ->withHeader('Authorization', 'Bearer ' . $this->t->registrarToken())
+            ->withParsedBody([])
+            ->withBody($stream);
+
+        // Act
+        $response = $this->t->server->registrationMiddleware()->process($request, $this->t->server->registrationHandler());
+
+        // Assert
+        self::assertSame(201, $response->getStatusCode());
+    }
+
     public function testItNeedsAnAccessToken(): void
     {
         // Arrange
